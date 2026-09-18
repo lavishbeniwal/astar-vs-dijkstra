@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Dijkstra and A* race across Manhattan's real street network. Same shortest route, 73% less searching, across 147 random trips.">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="A* vs Dijkstra">
+<meta property="og:description" content="Dijkstra and A* race across Manhattan's real street network. Same shortest route, 73% less searching, across 147 random trips.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Cpath d='M7 23h7v-7h5v-7h6' fill='none' stroke='%237ff5e6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='7' cy='23' r='3' fill='%2330d158'/%3E%3Ccircle cx='25' cy='9' r='3' fill='%23ff453a'/%3E%3C/svg%3E">
+<style>
+  :root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; }
+  [hidden] { display: none !important; }
+</style>
+<title>A* vs Dijkstra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --black: #000000;
+  --night: #0b0b0c;
+  --graphite: #1d1d1f;
+  --line-dark: #2c2c2e;
+  --on-dark: #f5f5f7;
+  --on-dark-2: #a1a1a6;
+  --on-dark-3: #86868b;
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --paper: #f5f5f7;
+  --white: #ffffff;
+  --line: #d2d2d7;
+  --blue: #0071e3;
+  --blue-hover: #0077ed;
+  --link: #0066cc;
+  --link-dark: #2997ff;
+  --dij: #d9820a;
+  --ast: #1aa595;
+  --dij-dark: #d07e0a;
+  --ast-dark: #14a393;
+  --go: #30d158;
+  --stop: #ff453a;
+  --grad-dark: linear-gradient(90deg, #7ff5e6 0%, #2997ff 100%);
+  --grad-light: linear-gradient(90deg, #12a08f 0%, #0071e3 100%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  --nav-h: 52px;
+}
+html { background: var(--black); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.47;
+  letter-spacing: -0.022em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+section[id] { scroll-margin-top: var(--nav-h); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--link-dark); outline-offset: 3px; border-radius: 6px; }
+.wrap { width: min(var(--w, 980px), calc(100% - 44px)); margin-inline: auto; }
+.num { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Local nav ---------- */
+.localnav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  height: var(--nav-h);
+  background: rgba(22, 22, 23, 0.74);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--on-dark);
+}
+.localnav .wrap { --w: 1024px; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { font-size: 21px; font-weight: 600; letter-spacing: 0.004em; text-decoration: none; color: var(--on-dark); white-space: nowrap; }
+.navlinks { display: flex; align-items: center; gap: 24px; }
+.navlinks a { font-size: 12px; letter-spacing: -0.01em; text-decoration: none; color: rgba(255, 255, 255, 0.82); }
+.navlinks a:hover { color: var(--link-dark); }
+.navlinks .navpill { color: #fff; background: var(--blue); border-radius: 980px; padding: 4px 12px; }
+.navlinks .navpill:hover { color: #fff; background: var(--blue-hover); }
+@media (max-width: 760px) { .navlinks .navtext { display: none; } }
+
+/* ---------- Shared type ---------- */
+.headline { font-size: clamp(40px, 6vw, 64px); line-height: 1.06; font-weight: 600; letter-spacing: -0.028em; margin: 0; text-wrap: balance; }
+.intro { font-size: clamp(19px, 2vw, 24px); line-height: 1.33; font-weight: 600; letter-spacing: -0.012em; margin: 20px 0 0; max-width: 40ch; text-wrap: pretty; }
+.on-light .intro { color: var(--ink-2); }
+.on-light .intro strong { color: var(--ink); font-weight: 600; }
+.on-dark .intro { color: var(--on-dark-3); }
+.on-dark .intro strong { color: var(--on-dark); font-weight: 600; }
+.grad-dark { background: var(--grad-dark); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.grad-light { background: var(--grad-light); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.center { text-align: center; }
+.center .intro { margin-inline: auto; }
+.more { font-size: 17px; text-decoration: none; white-space: nowrap; }
+.more::after { content: "\00a0\203A"; }
+.more:hover { text-decoration: underline; }
+.on-dark .more { color: var(--link-dark); }
+.on-light .more { color: var(--link); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 17px; font-weight: 400; letter-spacing: -0.022em;
+  color: #fff; background: var(--blue); border: 0; border-radius: 980px;
+  padding: 11px 22px; text-decoration: none; cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.btn:hover { background: var(--blue-hover); }
+.btn:active { transform: scale(0.97); }
+sup { font-size: 0.55em; line-height: 0; vertical-align: 0.9em; font-weight: 400; margin-left: 1px; }
+.on-dark sup a, .on-light sup a { text-decoration: none; }
+
+/* ---------- Hero ---------- */
+.hero { background: var(--black); color: var(--on-dark); padding-block: 72px 44px; overflow: hidden; }
+.hero .kicker { font-size: clamp(21px, 2.4vw, 28px); font-weight: 600; letter-spacing: 0.004em; margin: 0 0 10px; color: var(--on-dark); }
+.hero h1 { font-size: clamp(46px, 8.4vw, 100px); line-height: 1.02; font-weight: 700; letter-spacing: -0.042em; margin: 0; text-wrap: balance; }
+.hero .intro { max-width: 34ch; }
+.ctas { display: flex; flex-wrap: wrap; gap: 14px 30px; align-items: center; justify-content: center; margin-top: 32px; }
+.hero-stage { position: relative; width: min(1400px, calc(100% - 44px)); margin: 56px auto 0; height: 320px; }
+.hero-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hero-stage .layer { transition: opacity 0.55s ease; }
+.hero-caption {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 8px 28px;
+  margin: 22px auto 0; width: min(980px, calc(100% - 44px));
+  font-size: 14px; letter-spacing: -0.01em; color: var(--on-dark-2);
+}
+.hero-caption b { color: var(--on-dark); font-weight: 600; margin-left: 4px; }
+.key { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 0.02em; }
+.key.dij { background: var(--dij-dark); }
+.key.ast { background: var(--ast-dark); }
+.on-light .key.dij { background: var(--dij); }
+.on-light .key.ast { background: var(--ast); }
+@media (prefers-reduced-motion: no-preference) {
+  .hero .kicker, .hero h1, .hero .intro, .hero .ctas, .hero-stage { animation: heroIn 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .hero h1 { animation-delay: 0.08s; }
+  .hero .intro { animation-delay: 0.2s; }
+  .hero .ctas { animation-delay: 0.3s; }
+  .hero-stage { animation-delay: 0.38s; animation-duration: 1.6s; }
+  @keyframes heroIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+}
+
+/* ---------- Statement ---------- */
+.statement { background: var(--black); color: var(--on-dark); padding-block: 96px 140px; }
+.statement p { margin: 0; font-size: clamp(28px, 4.2vw, 48px); line-height: 1.14; font-weight: 600; letter-spacing: -0.024em; text-wrap: pretty; }
+.statement .w { transition: color 0.35s ease; }
+.statement .scrub .w { color: #636366; }
+.statement .scrub .w.on { color: var(--on-dark); }
+
+/* ---------- Highlights ---------- */
+.highlights { background: var(--paper); color: var(--ink); padding-block: 120px; }
+.highlights .wrap { --w: 1100px; }
+.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; margin-top: 56px; }
+.tile { background: var(--white); border-radius: 28px; padding: 40px 36px 36px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.tile.w4 { grid-column: span 4; }
+.tile.w2 { grid-column: span 2; }
+.tile.dark { background: var(--black); color: var(--on-dark); }
+.tile .fig { font-size: clamp(64px, 7.6vw, 104px); line-height: 0.95; font-weight: 700; letter-spacing: -0.045em; margin: 0; font-variant-numeric: tabular-nums; }
+.tile .fig.sm { font-size: clamp(56px, 5.6vw, 76px); }
+.tile .fig { color: var(--ink); }
+.tile.dark .fig { color: var(--on-dark); }
+.tile .fig.grad-light { color: transparent; }
+.tile p { margin: 0; font-size: 19px; line-height: 1.32; font-weight: 600; letter-spacing: -0.012em; color: var(--ink-2); text-wrap: pretty; }
+.tile p strong { color: var(--ink); font-weight: 600; }
+.tile.dark p { color: var(--on-dark-3); }
+.tile.dark p strong { color: var(--on-dark); }
+.tile .eyebrow { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink-2); }
+.tile.dark .eyebrow { color: var(--on-dark-3); }
+.bars { display: grid; gap: 14px; margin-top: auto; padding-top: 18px; }
+.bar-row { display: grid; grid-template-columns: 92px 1fr 56px; align-items: center; gap: 14px; font-size: 14px; }
+.bar-row .lab { color: var(--ink); font-weight: 500; white-space: nowrap; }
+.bar-row .val { color: var(--ink); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.track { height: 14px; }
+.bar { height: 100%; width: calc(var(--v) * 100%); border-radius: 0 4px 4px 0; transform-origin: left center; }
+.bar.dij { background: var(--dij); }
+.bar.ast { background: var(--ast); }
+@media (max-width: 1000px) {
+  .bento { grid-template-columns: repeat(2, 1fr); }
+  .tile.w4 { grid-column: span 2; }
+  .tile.w2 { grid-column: span 1; }
+}
+@media (max-width: 640px) {
+  .bento { grid-template-columns: 1fr; }
+  .tile.w4, .tile.w2 { grid-column: auto; }
+  .tile { padding: 32px 26px 28px; }
+}
+
+/* ---------- How it works ---------- */
+.how { background: var(--white); color: var(--ink); padding-block: 120px; }
+.how .wrap { --w: 1100px; }
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 56px; }
+.algo { background: var(--paper); border-radius: 28px; padding: 36px 36px 34px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.algo canvas { display: block; width: 100%; aspect-ratio: 19 / 11; max-width: 100%; margin-bottom: 18px; }
+.algo .name { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 0; display: flex; align-items: center; }
+.algo .name .key { width: 12px; height: 12px; margin-right: 10px; }
+.algo .tag { font-size: 17px; color: var(--ink-2); margin: 0; }
+.algo .desc { font-size: 17px; margin: 6px 0 0; color: var(--ink); text-wrap: pretty; }
+.formula { margin-top: auto; padding-top: 22px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.formula .eq { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+.formula .eq .h { box-shadow: inset 0 -3px 0 var(--ast); }
+.formula .live { font-size: 14px; color: var(--ink-2); }
+.formula .live b { color: var(--ink); font-weight: 600; }
+.terms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 64px; }
+.terms div { border-top: 1px solid var(--line); padding-top: 20px; }
+.terms h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.016em; margin: 0 0 8px; }
+.terms p { margin: 0; color: var(--ink-2); }
+@media (max-width: 860px) {
+  .duo { grid-template-columns: 1fr; }
+  .terms { grid-template-columns: 1fr; gap: 24px; }
+  .algo { padding: 28px 24px 26px; }
+}
+
+/* ---------- Race ---------- */
+.race { background: var(--black); color: var(--on-dark); padding-block: 120px; }
+.race .wrap { --w: 1180px; }
+.controls { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 14px; margin-top: 48px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label { font-size: 12px; color: var(--on-dark-3); padding-left: 4px; }
+.field select {
+  appearance: none; -webkit-appearance: none;
+  font: inherit; font-size: 17px; color: var(--on-dark);
+  background-color: var(--graphite);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a1a1a6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  border: 1px solid #3a3a3c; border-radius: 12px;
+  padding: 11px 40px 11px 14px; width: 230px; max-width: 100%; cursor: pointer;
+}
+.field select:hover { border-color: #5a5a5e; }
+.icon-btn {
+  width: 46px; height: 46px; border-radius: 50%; border: 1px solid #3a3a3c;
+  background: var(--graphite); color: var(--on-dark); cursor: pointer;
+  display: inline-grid; place-items: center; transition: transform 0.3s ease, border-color 0.2s ease;
+}
+.icon-btn:hover { border-color: #5a5a5e; }
+.icon-btn:active { transform: rotate(180deg); }
+.ghost {
+  font: inherit; font-size: 17px; color: var(--link-dark); background: transparent; border: 0;
+  padding: 11px 6px; cursor: pointer;
+}
+.ghost:hover { text-decoration: underline; }
+.seg { display: flex; justify-content: center; margin-top: 18px; }
+.seg fieldset { border: 0; margin: 0; padding: 4px; display: inline-flex; gap: 2px; background: var(--graphite); border-radius: 980px; }
+.seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font-size: 14px; color: var(--on-dark-2); padding: 7px 16px; border-radius: 980px; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.seg input:checked + label { background: #48484a; color: var(--on-dark); }
+.seg input:focus-visible + label { outline: 2px solid var(--link-dark); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 40px; }
+.panel { background: var(--night); border: 1px solid #1c1c1e; border-radius: 28px; overflow: hidden; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 24px 26px 8px; }
+.panel-name { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; }
+.panel-name .key { width: 11px; height: 11px; margin-right: 10px; }
+.panel-sub { font-size: 14px; color: var(--on-dark-3); margin-top: 2px; }
+.panel-count { text-align: right; }
+.panel-count b { display: block; font-size: 34px; line-height: 1.05; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.panel-count span { font-size: 12px; color: var(--on-dark-3); }
+.panel canvas { display: block; width: 100%; aspect-ratio: 4 / 3; max-width: 100%; }
+.panel-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; padding: 12px 26px 22px; font-size: 14px; color: var(--on-dark-3); }
+.panel-foot b { color: var(--on-dark); font-weight: 600; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 26px; margin-top: 20px; font-size: 12px; color: var(--on-dark-3); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend .mk { width: 9px; height: 9px; border-radius: 50%; }
+.legend .mk.go { background: var(--go); }
+.legend .mk.stop { background: var(--stop); }
+.legend .ln { width: 18px; height: 3px; border-radius: 2px; background: #fff; }
+.legend .rp { width: 34px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #5a3406, #ffb547); }
+.legend .rp.a { background: linear-gradient(90deg, #0b5048, #7ff5e6); }
+.verdict { margin: 44px auto 0; max-width: 30ch; text-align: center; font-size: clamp(24px, 3vw, 34px); line-height: 1.2; font-weight: 600; letter-spacing: -0.022em; color: var(--on-dark-3); min-height: 2.4em; text-wrap: balance; }
+.verdict strong { color: var(--on-dark); font-weight: 600; }
+@media (max-width: 820px) {
+  .stage { grid-template-columns: 1fr; }
+  .panel-head { padding: 20px 20px 6px; }
+  .panel-foot { padding: 10px 20px 18px; }
+  .field select { width: 100%; }
+  .field { flex: 1 1 200px; }
+}
+
+/* ---------- Research ---------- */
+.research { background: var(--white); color: var(--ink); padding-block: 120px; }
+.research .wrap { --w: 1100px; }
+.card { background: var(--paper); border-radius: 28px; padding: 36px 36px 30px; min-width: 0; }
+.card h3 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.card .sub { color: var(--ink-2); margin: 6px 0 0; max-width: 60ch; }
+.chart-card { margin-top: 56px; }
+.chart { position: relative; margin-top: 22px; }
+.chart svg { display: block; overflow: visible; }
+.chart text { font-family: var(--font); font-size: 12px; fill: var(--ink-2); letter-spacing: -0.01em; }
+.chart .dot { transition: r 0.15s ease; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 2;
+  background: var(--white); color: var(--ink); border-radius: 12px; padding: 10px 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  font-size: 13px; line-height: 1.4; white-space: nowrap; transform: translate(-50%, calc(-100% - 12px));
+}
+.tip b { font-weight: 600; }
+.tip span { color: var(--ink-2); }
+.table-view { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.table-view summary { cursor: pointer; color: var(--link); font-size: 14px; width: fit-content; }
+.tscroll { overflow-x: auto; max-height: 360px; overflow-y: auto; margin-top: 12px; }
+.tscroll table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tscroll th { text-align: right; font-weight: 600; color: var(--ink-2); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--paper); }
+.tscroll td { text-align: right; padding: 7px 10px; border-bottom: 1px solid #e3e3e8; }
+.tscroll th:first-child, .tscroll td:first-child { text-align: left; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+.pair .card { display: flex; flex-direction: column; }
+.hbars { display: grid; gap: 16px; margin-top: auto; padding-top: 26px; }
+.hrow { display: grid; grid-template-columns: minmax(118px, 34%) 1fr 48px; gap: 14px; align-items: center; font-size: 14px; }
+.hrow .hl { color: var(--ink); font-weight: 500; }
+.hrow .hl em { display: block; font-style: normal; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+.hrow .hv { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.htrack { height: 12px; }
+.hbar { height: 100%; width: calc(var(--v) * 100%); background: var(--ast); border-radius: 0 4px 4px 0; transform-origin: left center; }
+.big-note { font-size: 48px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin: 18px 0 0; font-variant-numeric: tabular-nums; }
+.big-note small { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink-2); margin-left: 8px; }
+@media (max-width: 860px) {
+  .pair { grid-template-columns: 1fr; }
+  .card { padding: 28px 22px 24px; }
+}
+
+/* ---------- Specs ---------- */
+.specs { background: var(--paper); color: var(--ink); padding-block: 120px; }
+.spec-list { margin-top: 48px; }
+.spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); gap: 12px 40px; border-top: 1px solid var(--line); padding-block: 28px; }
+.spec h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.016em; margin: 0; }
+.spec ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.spec li { color: var(--ink); }
+.spec li span { color: var(--ink-2); }
+.phases { counter-reset: ph; }
+.phases li { display: grid; grid-template-columns: 76px 1fr; gap: 12px; }
+.phases li::before { counter-increment: ph; content: "Phase " counter(ph); color: var(--ink-2); font-size: 14px; padding-top: 2px; white-space: nowrap; }
+code { font-family: var(--mono); font-size: 0.88em; letter-spacing: 0; }
+@media (max-width: 700px) { .spec { grid-template-columns: 1fr; } }
+
+/* ---------- Run ---------- */
+.run { background: var(--black); color: var(--on-dark); padding-block: 120px; }
+.codeblock {
+  margin: 48px auto 0; max-width: 760px; background: var(--graphite); border-radius: 22px;
+  padding: 28px 30px; overflow-x: auto; text-align: left;
+  font-family: var(--mono); font-size: 15px; line-height: 1.7; letter-spacing: 0; color: var(--on-dark);
+}
+.codeblock pre { margin: 0; font: inherit; }
+.codeblock .c { color: var(--on-dark-3); }
+
+/* ---------- Footer ---------- */
+.foot { background: var(--paper); color: var(--ink-2); padding-block: 36px 44px; font-size: 12px; line-height: 1.34; letter-spacing: -0.01em; }
+.foot ol { margin: 0; padding-left: 18px; display: grid; gap: 10px; max-width: 90ch; }
+.foot .base { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+
+/* ---------- Scroll-driven reveals (Chromium/Safari with view timelines) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+    .grow { animation: grow linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+    .bar, .hbar { animation: fillx linear both; animation-timeline: view(); animation-range: entry 10% cover 40%; }
+    @keyframes rise { from { opacity: 0; transform: translateY(48px); } to { opacity: 1; transform: none; } }
+    @keyframes grow { from { opacity: 0.35; transform: scale(0.93); } to { opacity: 1; transform: none; } }
+    @keyframes fillx { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  }
+}
+</style>
+</head>
+<body>
+<nav class="localnav" aria-label="Page">
+  <div class="wrap">
+    <a class="brand" href="#top">A* vs Dijkstra</a>
+    <div class="navlinks">
+      <a class="navtext" href="#overview">Overview</a>
+      <a class="navtext" href="#how">How it works</a>
+      <a class="navtext" href="#research">Research</a>
+      <a class="navtext" href="#specs">Specs</a>
+      <a class="navpill" href="#race">Watch the race</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="hero on-dark center" id="top">
+    <div class="wrap">
+      <p class="kicker">Smart Route Planner</p>
+      <h1>Same route.<br><span class="grad-dark">73% less searching.</span></h1>
+      <p class="intro">Dijkstra and A* both find the shortest drive across Manhattan. <strong>A* just knows which way to look.</strong></p>
+      <div class="ctas">
+        <a class="btn" href="#race">Watch the race</a>
+        <a class="more" href="#research">See the research</a>
+      </div>
+    </div>
+    <div class="hero-stage" id="hero-stage">
+      <canvas id="hero-streets" aria-hidden="true"></canvas>
+      <canvas class="layer" id="hero-d" aria-hidden="true"></canvas>
+      <canvas class="layer" id="hero-a" role="img" aria-label="Manhattan's street grid, turned so uptown runs to the right. Dijkstra's search spreads out in amber while A*'s search heads straight for the destination in teal."></canvas>
+    </div>
+    <div class="hero-caption num" aria-live="off">
+      <span><i class="key dij"></i>Dijkstra<b id="hc-d">1,352</b></span>
+      <span><i class="key ast"></i>A*<b id="hc-a">227</b></span>
+      <span id="hc-r">West Village → Grand Central · 3.39 km</span>
+    </div>
+  </section>
+
+  <section class="statement on-dark" aria-label="The idea">
+    <div class="wrap">
+      <p id="statement-text">Dijkstra searches in every direction at once, street by street, until it happens to reach your destination. A* asks one more question at every corner: how far is it still, as the crow flies? That one guess lets it skip nearly three of every four intersections. And the route it finds is never a meter longer.</p>
+    </div>
+  </section>
+
+  <section class="highlights on-light" id="overview">
+    <div class="wrap">
+      <h2 class="headline reveal">The highlights.</h2>
+      <div class="bento">
+        <article class="tile w4 reveal">
+          <span class="eyebrow">Average across 147 random trips<sup><a href="#fn1">1</a></sup></span>
+          <p class="fig grad-light"><span class="count" data-to="73">73</span>%</p>
+          <p><strong>Fewer intersections explored by A*.</strong> On an average trip it checks 739 intersections where Dijkstra checks 2,394.</p>
+          <div class="bars" role="img" aria-label="Average intersections explored per trip: Dijkstra 2,394, A* 739">
+            <div class="bar-row"><span class="lab"><i class="key dij"></i>Dijkstra</span><div class="track"><div class="bar dij" style="--v:1"></div></div><span class="val">2,394</span></div>
+            <div class="bar-row"><span class="lab"><i class="key ast"></i>A*</span><div class="track"><div class="bar ast" style="--v:0.3088"></div></div><span class="val">739</span></div>
+          </div>
+        </article>
+        <article class="tile w2 dark reveal">
+          <span class="eyebrow">Optimal every time</span>
+          <p class="fig sm"><span class="count" data-to="147">147</span>/147</p>
+          <p><strong>Trips where A* found exactly the same shortest route</strong> as Dijkstra. Faster, and never worse.</p>
+        </article>
+        <article class="tile w2 reveal">
+          <span class="eyebrow">Search time</span>
+          <p class="fig sm grad-light"><span class="count" data-to="1.4" data-dec="1">1.4</span>×</p>
+          <p><strong>Faster on average</strong> in Python: 1.99 ms per search instead of 2.80 ms.<sup><a href="#fn1">1</a></sup></p>
+        </article>
+        <article class="tile w2 reveal">
+          <span class="eyebrow">Best single trip</span>
+          <p class="fig sm grad-light"><span class="count" data-to="97">97</span>%</p>
+          <p><strong>Of Dijkstra's work skipped</strong> on the luckiest trip. Even the worst trip still skipped 24%.</p>
+        </article>
+        <article class="tile w2 reveal">
+          <span class="eyebrow">Real streets</span>
+          <p class="fig sm"><span class="count" data-to="4634">4,634</span></p>
+          <p><strong>Manhattan intersections from OpenStreetMap,</strong> linked by 9,916 road segments. One-way streets stay one-way.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="how on-light" id="how">
+    <div class="wrap">
+      <h2 class="headline reveal">Two ways to find the way.</h2>
+      <p class="intro reveal">Both algorithms grow outward from the start, one intersection at a time. <strong>The only difference is which intersection they pick next.</strong></p>
+      <div class="duo" id="how-grids">
+        <article class="algo reveal">
+          <canvas id="grid-d" role="img" aria-label="On a simple grid, Dijkstra's search spreads out as a diamond in every direction before reaching the destination."></canvas>
+          <h3 class="name"><i class="key dij"></i>Dijkstra</h3>
+          <p class="tag">Uniform-cost search</p>
+          <p class="desc">Always picks the closest unexplored intersection to the start. The search ripples out evenly, like a stone dropped in water, with no idea where the destination is.</p>
+          <div class="formula"><span class="eq">f(n) = g(n)</span><span class="live num"><b id="gc-d">0</b> intersections explored</span></div>
+        </article>
+        <article class="algo reveal">
+          <canvas id="grid-a" role="img" aria-label="On the same grid, A*'s search heads almost straight for the destination."></canvas>
+          <h3 class="name"><i class="key ast"></i>A*</h3>
+          <p class="tag">Informed search</p>
+          <p class="desc">Picks the intersection with the lowest distance driven so far <em>plus</em> a straight-line guess of the distance still to go. So the search leans toward the destination.</p>
+          <div class="formula"><span class="eq">f(n) = g(n) + <span class="h">h(n)</span></span><span class="live num"><b id="gc-a">0</b> intersections explored</span></div>
+        </article>
+      </div>
+      <div class="terms">
+        <div class="reveal"><h3>g(n)</h3><p>Meters actually driven from the start to intersection <em>n</em>, along real road segments.</p></div>
+        <div class="reveal"><h3>h(n)</h3><p>Great-circle distance from <em>n</em> to the destination, computed with the haversine formula.</p></div>
+        <div class="reveal"><h3>Why it stays optimal</h3><p>No road trip is shorter than the straight line, so h(n) never overestimates. That makes the guess admissible, and A* is guaranteed to return the shortest route.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="race on-dark" id="race">
+    <div class="wrap">
+      <div class="center">
+        <h2 class="headline reveal">Watch them race.</h2>
+        <p class="intro reveal">Pick any two places. Both algorithms run live in your browser, on the same 4,634 real intersections. <strong>Each tick, each one explores one more intersection.</strong><sup><a href="#fn2">2</a></sup></p>
+      </div>
+      <div class="controls">
+        <div class="field"><label for="from">From</label><select id="from"></select></div>
+        <button class="icon-btn" id="swap" type="button" aria-label="Swap start and destination">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 6h11m0 0-3-3m3 3-3 3M15 12H4m0 0 3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="field"><label for="to">To</label><select id="to"></select></div>
+        <button class="btn" id="go" type="button">Start race</button>
+        <button class="ghost" id="rand" type="button">Surprise me</button>
+      </div>
+      <div class="seg">
+        <fieldset>
+          <legend>Race speed</legend>
+          <input type="radio" name="speed" id="sp-slow" value="14"><label for="sp-slow">Slow</label>
+          <input type="radio" name="speed" id="sp-normal" value="7" checked><label for="sp-normal">Normal</label>
+          <input type="radio" name="speed" id="sp-fast" value="2.6"><label for="sp-fast">Fast</label>
+        </fieldset>
+      </div>
+      <div class="stage grow" id="race-stage">
+        <article class="panel">
+          <header class="panel-head">
+            <div><div class="panel-name"><i class="key dij"></i>Dijkstra</div><div class="panel-sub">Explores by distance driven</div></div>
+            <div class="panel-count"><b id="rn-d">1,352</b><span>intersections explored</span></div>
+          </header>
+          <canvas id="rc-d" role="img" aria-label="Dijkstra's search on the Manhattan street network"></canvas>
+          <footer class="panel-foot"><span>Route <b id="rk-d">3.39 km</b></span><span><b id="rs-d">29.2%</b> of Manhattan searched</span></footer>
+        </article>
+        <article class="panel">
+          <header class="panel-head">
+            <div><div class="panel-name"><i class="key ast"></i>A*</div><div class="panel-sub">Distance driven + distance to go</div></div>
+            <div class="panel-count"><b id="rn-a">227</b><span>intersections explored</span></div>
+          </header>
+          <canvas id="rc-a" role="img" aria-label="A*'s search on the Manhattan street network"></canvas>
+          <footer class="panel-foot"><span>Route <b id="rk-a">3.39 km</b></span><span><b id="rs-a">4.9%</b> of Manhattan searched</span></footer>
+        </article>
+      </div>
+      <div class="legend">
+        <span><i class="mk go"></i>Start</span>
+        <span><i class="mk stop"></i>Destination</span>
+        <span><i class="ln"></i>Shortest route</span>
+        <span><i class="rp"></i><i class="rp a"></i>Explored earlier → later</span>
+      </div>
+      <p class="verdict" id="verdict" aria-live="polite">A* explored <strong>83% fewer intersections</strong>, 227 instead of 1,352, and found the <strong>identical 3.39 km route</strong>.</p>
+    </div>
+  </section>
+
+  <section class="research on-light" id="research">
+    <div class="wrap">
+      <h2 class="headline reveal">Not one lucky route.<br>147 of them.</h2>
+      <p class="intro reveal">150 random start and end points were drawn across Manhattan, each at least 300 m apart. 147 could be reached by car. <strong>Both algorithms ran on every one.</strong><sup><a href="#fn1">1</a></sup></p>
+
+      <article class="card chart-card reveal">
+        <h3>Savings by trip length</h3>
+        <p class="sub">Each dot is one trip: the share of Dijkstra's intersections that A* never had to explore. Hover a dot for details.</p>
+        <div class="chart" id="scatter"></div>
+        <details class="table-view">
+          <summary>Show all 147 trips as a table</summary>
+          <div class="tscroll"><table id="trip-table"><thead><tr><th scope="col">Trip length</th><th scope="col">Dijkstra</th><th scope="col">A*</th><th scope="col">Skipped</th><th scope="col">Angle to grid</th></tr></thead><tbody></tbody></table></div>
+        </details>
+      </article>
+
+      <div class="pair">
+        <article class="card reveal">
+          <h3>Shorter trips save more.</h3>
+          <p class="sub">Correlation between trip length and savings: −0.55. A likely reason: on a narrow island, Dijkstra's ripple soon hits the river on both sides, so on long uptown–downtown trips it can't wander as far off course.</p>
+          <div class="hbars" role="img" aria-label="Average share of intersections skipped: under 1 km 85%, 1 to 5 km 80%, over 5 km 69%">
+            <div class="hrow"><span class="hl">Under 1 km<em>4 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.853"></div></div><span class="hv">85%</span></div>
+            <div class="hrow"><span class="hl">1–5 km<em>47 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.800"></div></div><span class="hv">80%</span></div>
+            <div class="hrow"><span class="hl">Over 5 km<em>96 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.688"></div></div><span class="hv">69%</span></div>
+          </div>
+        </article>
+        <article class="card reveal">
+          <h3>The hypothesis that didn't hold.</h3>
+          <p class="sub">Trips that cut diagonally across the street grid were expected to trip A* up, since a straight-line guess can't tell apart the many equally short staircase paths. The data disagreed.</p>
+          <p class="big-note">−0.06<small>correlation between route angle and savings</small></p>
+          <div class="hbars" role="img" aria-label="Average share of intersections skipped: grid-aligned 73%, mixed 72%, diagonal 75%">
+            <div class="hrow"><span class="hl">Aligned, 0–15°<em>94 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.727"></div></div><span class="hv">73%</span></div>
+            <div class="hrow"><span class="hl">Mixed, 15–30°<em>33 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.720"></div></div><span class="hv">72%</span></div>
+            <div class="hrow"><span class="hl">Diagonal, 30–45°<em>20 trips</em></span><div class="htrack"><div class="hbar" style="--v:0.748"></div></div><span class="hv">75%</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="specs on-light" id="specs">
+    <div class="wrap">
+      <h2 class="headline reveal">Tech specs.</h2>
+      <div class="spec-list">
+        <div class="spec"><h3>Algorithms</h3><ul>
+          <li>Dijkstra's algorithm (uniform-cost search)</li>
+          <li>A* search, ordered by f(n) = g(n) + h(n)</li>
+          <li><span>Both use a binary heap with an insertion counter to break ties</span></li>
+        </ul></div>
+        <div class="spec"><h3>Heuristic</h3><ul>
+          <li>Haversine great-circle distance, Earth radius 6,371 km</li>
+          <li><span>Admissible: never overestimates a real road trip, so A* stays optimal</span></li>
+        </ul></div>
+        <div class="spec"><h3>Map data</h3><ul>
+          <li>OpenStreetMap drivable road network for Manhattan, via OSMnx</li>
+          <li>4,634 intersections and 9,916 directed road segments</li>
+          <li><span>Edge weights are real lengths in meters. One-way streets are never forced two-way.</span></li>
+          <li><span>Cached locally as GraphML after the first download</span></li>
+        </ul></div>
+        <div class="spec"><h3>Interface</h3><ul>
+          <li>Streamlit web app</li>
+          <li>Pick places from a list, or click them on a Folium map</li>
+          <li><span>Node-by-node animated replay, side-by-side metrics and a static comparison map for reports</span></li>
+        </ul></div>
+        <div class="spec"><h3>Verification</h3><ul>
+          <li>Unit tests: equal optimal cost, connected paths whose cost matches their edges, A* never exploring more than Dijkstra, unreachable goals, and start equal to goal</li>
+          <li><span>147-trip batch experiment, exported to CSV and scatter plots</span></li>
+        </ul></div>
+        <div class="spec"><h3>Built in five phases</h3><ul class="phases">
+          <li>Both algorithms, validated on a synthetic 15 × 15 grid</li>
+          <li>Moved onto Manhattan's real road network</li>
+          <li>Side-by-side maps of every explored intersection</li>
+          <li>Interactive demo with animated search replay</li>
+          <li>Batch experiment across 147 random trips</li>
+        </ul></div>
+        <div class="spec"><h3>Built with</h3><ul>
+          <li>Python · OSMnx · NetworkX · NumPy · pandas · Matplotlib · Folium · Streamlit</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="run on-dark center" id="run">
+    <div class="wrap">
+      <h2 class="headline reveal">Run it yourself.</h2>
+      <p class="intro reveal">Install, launch, and race on your own machine. <strong>The first run downloads Manhattan in about a minute. After that it loads instantly.</strong></p>
+      <div class="codeblock reveal"><pre><span class="c"># Install the dependencies</span>
+pip install -r requirements.txt
+
+<span class="c"># Launch the interactive race</span>
+streamlit run app.py
+
+<span class="c"># Reproduce the 147-trip study</span>
+python -m experiments.batch_comparison
+
+<span class="c"># Run the tests</span>
+python -m unittest discover -s tests</pre></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <ol>
+      <li id="fn1">Results from <code>experiments/batch_comparison.py</code>: 150 random start and end pairs at least 300 m apart (seed 42), of which 147 were reachable by car. Averages are means across those 147 trips. Search times come from the Python implementation and vary by machine.</li>
+      <li id="fn2">The race on this page runs a JavaScript port of the project's Dijkstra and A* on the same road network, exported from <code>data/manhattan_drive.graphml</code>. It explores the same number of intersections as the Python version. Places are snapped to the nearest intersection.</li>
+      <li>Map data © OpenStreetMap contributors, available under the Open Database License.</li>
+    </ol>
+    <div class="base"><span>A* vs Dijkstra: Smart Route Planner</span><span>Manhattan, New York · 4,634 intersections</span></div>
+  </div>
+</footer>
+
+<script src="manhattan.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  var R = window.RouteEngine;
+  if (!R) return;
+  var N = R.N, EDGES = R.edges;
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function $(s) { return document.querySelector(s); }
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function km(m) { return (m / 1000).toFixed(2) + " km"; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  var PLACES = [
+    ["Battery Park", 40.7033, -74.0170],
+    ["Financial District", 40.7074, -74.0113],
+    ["West Village", 40.7402, -74.0027],
+    ["Union Square", 40.7359, -73.9911],
+    ["Chelsea Market", 40.7424, -74.0061],
+    ["Grand Central", 40.7527, -73.9772],
+    ["Times Square", 40.7580, -73.9855],
+    ["Bryant Park", 40.7536, -73.9832],
+    ["Upper East Side", 40.7825, -73.9601],
+    ["Upper West Side", 40.7850, -73.9713],
+    ["Harlem", 40.8075, -73.9465],
+    ["Inwood", 40.8677, -73.9212]
+  ];
+  var placeNode = PLACES.map(function (p) { return R.nearest(p[1], p[2]); });
+
+  // Project lon/lat to meters, turned 29° so the avenues run left to right
+  // (downtown on the left, uptown on the right, the Hudson along the top).
+  var RAD = Math.PI / 180, TH = 29 * RAD, LATC = 40.7831, LONC = -73.9712;
+  var KX = 111320 * Math.cos(LATC * RAD), KY = 110540;
+  var PX = new Float64Array(N), PY = new Float64Array(N);
+  for (var i = 0; i < N; i++) {
+    var ex = (R.LON[i] - LONC) * KX, ny = (R.LAT[i] - LATC) * KY;
+    PX[i] = ex * Math.sin(TH) + ny * Math.cos(TH);
+    PY[i] = ex * Math.cos(TH) - ny * Math.sin(TH);
+  }
+
+  var cache = {};
+  function run(s, t) {
+    var k = s + ">" + t;
+    if (!cache[k]) cache[k] = { s: s, t: t, d: R.dijkstra(s, t), a: R.astar(s, t) };
+    return cache[k];
+  }
+
+  function boundsOf(lists, minSpan) {
+    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    lists.forEach(function (l) {
+      for (var j = 0; j < l.length; j++) {
+        var n = l[j];
+        if (PX[n] < x0) x0 = PX[n]; if (PX[n] > x1) x1 = PX[n];
+        if (PY[n] < y0) y0 = PY[n]; if (PY[n] > y1) y1 = PY[n];
+      }
+    });
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    var hw = Math.max((x1 - x0) / 2, minSpan / 2), hh = Math.max((y1 - y0) / 2, minSpan / 2);
+    return { x0: cx - hw, x1: cx + hw, y0: cy - hh, y1: cy + hh };
+  }
+  var ALL = []; for (i = 0; i < N; i++) ALL.push(i);
+  var ISLAND = boundsOf([ALL], 0);
+
+  function makeCam(b, w, h, pad) {
+    var s = Math.min((w - 2 * pad) / (b.x1 - b.x0), (h - 2 * pad) / (b.y1 - b.y0));
+    var cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    var sx = new Float32Array(N), sy = new Float32Array(N);
+    for (var j = 0; j < N; j++) { sx[j] = w / 2 + (PX[j] - cx) * s; sy[j] = h / 2 + (PY[j] - cy) * s; }
+    return { s: s, w: w, h: h, sx: sx, sy: sy };
+  }
+  function sizeCanvas(cv, w, h) {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.max(1, Math.round(w * dpr));
+    cv.height = Math.max(1, Math.round(h * dpr));
+    var ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
+  }
+  function drawStreets(ctx, cam, color, lw) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath();
+    for (var k = 0; k < EDGES.length; k += 3) {
+      var u = EDGES[k], v = EDGES[k + 1];
+      ctx.moveTo(cam.sx[u], cam.sy[u]); ctx.lineTo(cam.sx[v], cam.sy[v]);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  function rgb(h) { return [1, 3, 5].map(function (o) { return parseInt(h.slice(o, o + 2), 16); }); }
+  function ramp(a, b, n) {
+    var A = rgb(a), B = rgb(b), out = [];
+    for (var j = 0; j < n; j++) {
+      var t = j / (n - 1);
+      out.push("rgb(" + A.map(function (v, c) { return Math.round(v + (B[c] - v) * t); }).join(",") + ")");
+    }
+    return out;
+  }
+  var PAL = { d: ramp("#5a3406", "#ffb547", 24), a: ramp("#0b5048", "#7ff5e6", 24) };
+  function drawDots(ctx, cam, order, from, to, pal, r) {
+    var n = order.length;
+    for (var j = from; j < to; j++) {
+      var node = order[j];
+      ctx.fillStyle = pal[Math.min(pal.length - 1, Math.floor(j / n * pal.length))];
+      ctx.beginPath(); ctx.arc(cam.sx[node], cam.sy[node], r, 0, 6.2832); ctx.fill();
+    }
+  }
+  function drawMarkers(ctx, cam, s, t, r, ring) {
+    [[s, "#30d158"], [t, "#ff453a"]].forEach(function (m) {
+      var x = cam.sx[m[0]], y = cam.sy[m[0]];
+      ctx.beginPath(); ctx.arc(x, y, r + 2, 0, 6.2832); ctx.fillStyle = ring; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fillStyle = m[1]; ctx.fill();
+    });
+  }
+  function drawRoute(ctx, cam, path, lw, glow) {
+    if (path.length < 2) return;
+    ctx.save();
+    ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = lw;
+    if (glow) { ctx.shadowColor = "rgba(255,255,255,0.75)"; ctx.shadowBlur = glow; }
+    ctx.beginPath();
+    path.forEach(function (n, j) { if (j) ctx.lineTo(cam.sx[n], cam.sy[n]); else ctx.moveTo(cam.sx[n], cam.sy[n]); });
+    ctx.stroke(); ctx.restore();
+  }
+  function sizes(cam, dotMax) {
+    return {
+      r: clamp(cam.s * 9, 0.9, dotMax),
+      lw: clamp(cam.s * 11, 1.6, 3.4),
+      mk: clamp(cam.s * 16, 3.5, 6),
+      street: clamp(cam.s * 5, 0.5, 1.2)
+    };
+  }
+
+  /* ---------------- Hero: overlaid search on the whole island ---------------- */
+  var HERO = [[2, 5], [1, 10], [3, 9], [0, 7], [8, 4]];
+  var hero = {
+    stage: $("#hero-stage"), cs: $("#hero-streets"), cd: $("#hero-d"), ca: $("#hero-a"),
+    idx: 0, phase: "hold", t: -1.6, step: 0, dn: 0, an: 0, aDone: false, visible: true
+  };
+  function heroLayout() {
+    var w = hero.stage.clientWidth;
+    hero.wide = w >= 740;
+    var h = hero.wide
+      ? Math.round((w - 24) * (ISLAND.y1 - ISLAND.y0) / (ISLAND.x1 - ISLAND.x0) + 24)
+      : Math.round(w * 0.8);
+    hero.stage.style.height = h + "px";
+    hero.w = w; hero.h = h;
+    hero.xs = sizeCanvas(hero.cs, w, h);
+    hero.xd = sizeCanvas(hero.cd, w, h);
+    hero.xa = sizeCanvas(hero.ca, w, h);
+    if (hero.wide) hero.cam = makeCam(ISLAND, w, h, 12);
+    heroRoute(hero.idx, true);
+    if (hero.phase !== "run") heroDrawTo(Infinity);
+    else heroDrawTo(hero.step);
+  }
+  function heroRoute(idx, keep) {
+    var p = HERO[idx];
+    hero.res = run(placeNode[p[0]], placeNode[p[1]]);
+    if (!hero.wide) hero.cam = makeCam(boundsOf([hero.res.d.order, hero.res.a.order], 900), hero.w, hero.h, 16);
+    hero.sz = sizes(hero.cam, 2.4);
+    hero.xs.clearRect(0, 0, hero.w, hero.h);
+    drawStreets(hero.xs, hero.cam, "rgba(255,255,255,0.13)", hero.wide ? 0.6 : hero.sz.street);
+    if (!keep) hero.step = 0;
+    document.getElementById("hc-r").textContent =
+      PLACES[p[0]][0] + " → " + PLACES[p[1]][0] + " · " + km(hero.res.a.cost);
+  }
+  function heroDrawTo(step) {
+    var res = hero.res, cam = hero.cam, z = hero.sz;
+    hero.xd.clearRect(0, 0, hero.w, hero.h);
+    hero.xa.clearRect(0, 0, hero.w, hero.h);
+    hero.dn = Math.min(Math.floor(step), res.d.explored);
+    hero.an = Math.min(Math.floor(step), res.a.explored);
+    drawDots(hero.xd, cam, res.d.order, 0, hero.dn, PAL.d, z.r);
+    drawDots(hero.xa, cam, res.a.order, 0, hero.an, PAL.a, z.r);
+    hero.aDone = hero.an >= res.a.explored;
+    if (hero.aDone) drawRoute(hero.xa, cam, res.a.path, z.lw, 10);
+    drawMarkers(hero.xa, cam, res.s, res.t, z.mk, "#000");
+    heroCaption();
+  }
+  function heroCaption() {
+    document.getElementById("hc-d").textContent = fmt(hero.dn);
+    document.getElementById("hc-a").textContent = fmt(hero.an);
+  }
+  function heroTick(dt) {
+    if (hero.phase === "run") {
+      var res = hero.res, cam = hero.cam, z = hero.sz;
+      hero.step += res.d.explored / 3.6 * dt;
+      var dTo = Math.min(Math.floor(hero.step), res.d.explored);
+      var aTo = Math.min(Math.floor(hero.step), res.a.explored);
+      drawDots(hero.xd, cam, res.d.order, hero.dn, dTo, PAL.d, z.r);
+      if (!hero.aDone) {
+        drawDots(hero.xa, cam, res.a.order, hero.an, aTo, PAL.a, z.r);
+        if (aTo >= res.a.explored) { hero.aDone = true; drawRoute(hero.xa, cam, res.a.path, z.lw, 10); }
+        drawMarkers(hero.xa, cam, res.s, res.t, z.mk, "#000");
+      }
+      hero.dn = dTo; hero.an = aTo;
+      heroCaption();
+      if (dTo >= res.d.explored) { hero.phase = "hold"; hero.t = 0; }
+    } else if (hero.phase === "hold") {
+      hero.t += dt;
+      if (hero.t > 2.8) { hero.phase = "fade"; hero.t = 0; hero.cd.style.opacity = 0; hero.ca.style.opacity = 0; }
+    } else if (hero.phase === "fade") {
+      hero.t += dt;
+      if (hero.t > 0.6) {
+        hero.idx = (hero.idx + 1) % HERO.length;
+        heroRoute(hero.idx, false);
+        heroDrawTo(0);
+        hero.cd.style.opacity = 1; hero.ca.style.opacity = 1;
+        hero.phase = "run";
+      }
+    }
+  }
+
+  /* ---------------- Race: two panels, one clock ---------------- */
+  var race = { s: placeNode[2], t: placeNode[5], step: Infinity, running: false, played: false, dur: 7, dn: 0, an: 0 };
+  var rc = {
+    d: { cv: $("#rc-d"), n: $("#rn-d"), k: $("#rk-d"), sh: $("#rs-d") },
+    a: { cv: $("#rc-a"), n: $("#rn-a"), k: $("#rk-a"), sh: $("#rs-a") }
+  };
+  var fromSel = $("#from"), toSel = $("#to");
+  [fromSel, toSel].forEach(function (sel) {
+    PLACES.forEach(function (p, j) { var o = document.createElement("option"); o.value = j; o.textContent = p[0]; sel.appendChild(o); });
+    var r = document.createElement("option"); r.value = "rand"; r.textContent = "Random intersection"; r.hidden = true; sel.appendChild(r);
+  });
+  fromSel.value = "2"; toSel.value = "5";
+
+  function raceLayout() {
+    race.res = run(race.s, race.t);
+    var w = rc.d.cv.clientWidth, h = Math.round(w * 0.75);
+    race.w = w; race.h = h;
+    rc.d.ctx = sizeCanvas(rc.d.cv, w, h);
+    rc.a.ctx = sizeCanvas(rc.a.cv, w, h);
+    race.cam = makeCam(boundsOf([race.res.d.order, race.res.a.order], 700), w, h, 22);
+    race.sz = sizes(race.cam, 3.4);
+    raceDrawTo(race.step);
+  }
+  function panelDraw(p, r, upto) {
+    var cam = race.cam, z = race.sz, ctx = p.ctx;
+    ctx.clearRect(0, 0, race.w, race.h);
+    drawStreets(ctx, cam, "rgba(255,255,255,0.14)", z.street);
+    var n = Math.min(Math.floor(upto), r.explored);
+    drawDots(ctx, cam, r.order, 0, n, p === rc.d ? PAL.d : PAL.a, z.r);
+    if (n >= r.explored && r.found) drawRoute(ctx, cam, r.path, z.lw, 8);
+    drawMarkers(ctx, cam, race.res.s, race.res.t, z.mk, "#0b0b0c");
+    return n;
+  }
+  function raceDrawTo(step) {
+    race.dn = panelDraw(rc.d, race.res.d, step);
+    race.an = panelDraw(rc.a, race.res.a, step);
+    raceStats();
+  }
+  function raceStats() {
+    var res = race.res;
+    [["d", race.dn, res.d], ["a", race.an, res.a]].forEach(function (x) {
+      var p = rc[x[0]], done = x[1] >= x[2].explored;
+      p.n.textContent = fmt(x[1]);
+      p.k.textContent = done ? (x[2].found ? km(x[2].cost) : "none") : "searching…";
+      p.sh.textContent = (x[1] / N * 100).toFixed(1) + "%";
+    });
+  }
+  function raceVerdict() {
+    var d = race.res.d, a = race.res.a, el = document.getElementById("verdict");
+    if (!d.found) { el.textContent = "Those two points aren't connected by drivable streets. Try another pair."; return; }
+    var red = (1 - a.explored / d.explored) * 100;
+    var same = Math.abs(d.cost - a.cost) < 0.5;
+    el.innerHTML = "A* explored <strong>" + (red >= 0.5 ? Math.round(red) + "% fewer intersections" : "just as many intersections") +
+      "</strong>, " + fmt(a.explored) + " instead of " + fmt(d.explored) + ", and found " +
+      (same ? "the <strong>identical " + km(a.cost) + " route</strong>." : "a " + km(a.cost) + " route.");
+  }
+  function raceStart() {
+    race.res = run(race.s, race.t);
+    race.cam = null;
+    raceLayout();
+    if (REDUCED) { race.step = Infinity; race.running = false; raceDrawTo(Infinity); raceVerdict(); return; }
+    race.step = 0; race.running = true;
+    raceDrawTo(0);
+    document.getElementById("verdict").innerHTML = "Racing…";
+  }
+  function raceTick(dt) {
+    var res = race.res, cam = race.cam, z = race.sz;
+    race.step += res.d.explored / race.dur * dt;
+    [["d", "dn"], ["a", "an"]].forEach(function (x) {
+      var p = rc[x[0]], r = res[x[0]], before = race[x[1]];
+      if (before >= r.explored) return;
+      var to = Math.min(Math.floor(race.step), r.explored);
+      drawDots(p.ctx, cam, r.order, before, to, x[0] === "d" ? PAL.d : PAL.a, z.r);
+      if (to >= r.explored && r.found) drawRoute(p.ctx, cam, r.path, z.lw, 8);
+      drawMarkers(p.ctx, cam, res.s, res.t, z.mk, "#0b0b0c");
+      race[x[1]] = to;
+    });
+    raceStats();
+    if (race.dn >= res.d.explored) { race.running = false; race.step = Infinity; raceVerdict(); }
+  }
+  function pickNamed() {
+    if (fromSel.value !== "rand") race.s = placeNode[+fromSel.value];
+    if (toSel.value !== "rand") race.t = placeNode[+toSel.value];
+  }
+  fromSel.addEventListener("change", function () { pickNamed(); raceStart(); });
+  toSel.addEventListener("change", function () { pickNamed(); raceStart(); });
+  $("#go").addEventListener("click", raceStart);
+  $("#swap").addEventListener("click", function () {
+    var v = fromSel.value; fromSel.value = toSel.value; toSel.value = v;
+    var s = race.s; race.s = race.t; race.t = s;
+    raceStart();
+  });
+  $("#rand").addEventListener("click", function () {
+    for (var tries = 0; tries < 40; tries++) {
+      var s = Math.floor(Math.random() * N), t = Math.floor(Math.random() * N);
+      if (s === t || R.dist(s, t) < 1500) continue;
+      if (run(s, t).d.found) { race.s = s; race.t = t; break; }
+    }
+    fromSel.value = "rand"; toSel.value = "rand";
+    raceStart();
+  });
+  document.querySelectorAll('input[name="speed"]').forEach(function (r) {
+    r.addEventListener("change", function () { race.dur = parseFloat(r.value); });
+  });
+
+  /* ---------------- How it works: the same idea on a toy grid ---------------- */
+  var GRID = { cols: 19, rows: 11, s: [6, 1], g: [5, 17] };
+  function gridSearch(useH) {
+    var cols = GRID.cols, rows = GRID.rows, n = cols * rows;
+    var s = GRID.s[0] * cols + GRID.s[1], t = GRID.g[0] * cols + GRID.g[1];
+    function h(j) { return Math.hypot(Math.floor(j / cols) - GRID.g[0], j % cols - GRID.g[1]); }
+    var g = new Array(n).fill(Infinity), prev = new Array(n).fill(-1), vis = new Array(n).fill(false);
+    var order = [], open = [[useH ? h(s) : 0, 0, s]], cnt = 1;
+    g[s] = 0;
+    while (open.length) {
+      var bi = 0;
+      for (var k = 1; k < open.length; k++) {
+        if (open[k][0] < open[bi][0] || (open[k][0] === open[bi][0] && open[k][1] < open[bi][1])) bi = k;
+      }
+      var node = open.splice(bi, 1)[0][2];
+      if (vis[node]) continue;
+      vis[node] = true; order.push(node);
+      if (node === t) break;
+      var r = Math.floor(node / cols), c = node % cols, nbs = [];
+      if (c + 1 < cols) nbs.push(node + 1);
+      if (r + 1 < rows) nbs.push(node + cols);
+      if (c > 0) nbs.push(node - 1);
+      if (r > 0) nbs.push(node - cols);
+      nbs.forEach(function (nb) {
+        if (vis[nb]) return;
+        var nd = g[node] + 1;
+        if (nd < g[nb]) { g[nb] = nd; prev[nb] = node; open.push([nd + (useH ? h(nb) : 0), cnt++, nb]); }
+      });
+    }
+    var path = [];
+    for (var x = t; x !== -1; x = prev[x]) path.push(x);
+    return { order: order, path: path.reverse(), s: s, t: t };
+  }
+  var grids = {
+    d: { cv: $("#grid-d"), res: gridSearch(false), pal: ramp("#f6d7ab", "#b86a06", 16), out: $("#gc-d") },
+    a: { cv: $("#grid-a"), res: gridSearch(true), pal: ramp("#b6e8e1", "#0e7f73", 16), out: $("#gc-a") },
+    step: Infinity, t: 0, visible: false
+  };
+  function gridsLayout() {
+    ["d", "a"].forEach(function (k) {
+      var p = grids[k], w = p.cv.clientWidth, h = Math.round(w * 11 / 19);
+      p.w = w; p.h = h; p.ctx = sizeCanvas(p.cv, w, h);
+    });
+    gridsDraw();
+  }
+  function gridsDraw() {
+    ["d", "a"].forEach(function (k) {
+      var p = grids[k], ctx = p.ctx, w = p.w, h = p.h, cols = GRID.cols, rows = GRID.rows;
+      var pad = 10, cell = Math.min((w - 2 * pad) / (cols - 1), (h - 2 * pad) / (rows - 1));
+      var ox = (w - cell * (cols - 1)) / 2, oy = (h - cell * (rows - 1)) / 2;
+      function X(j) { return ox + (j % cols) * cell; }
+      function Y(j) { return oy + Math.floor(j / cols) * cell; }
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = "#d2d2d7"; ctx.lineWidth = 1; ctx.beginPath();
+      for (var r = 0; r < rows; r++) { ctx.moveTo(ox, oy + r * cell); ctx.lineTo(ox + (cols - 1) * cell, oy + r * cell); }
+      for (var c = 0; c < cols; c++) { ctx.moveTo(ox + c * cell, oy); ctx.lineTo(ox + c * cell, oy + (rows - 1) * cell); }
+      ctx.stroke();
+      var res = p.res, n = Math.min(Math.floor(grids.step), res.order.length), rr = clamp(cell * 0.2, 2, 5);
+      for (var j = 0; j < n; j++) {
+        ctx.fillStyle = p.pal[Math.min(p.pal.length - 1, Math.floor(j / res.order.length * p.pal.length))];
+        ctx.beginPath(); ctx.arc(X(res.order[j]), Y(res.order[j]), rr, 0, 6.2832); ctx.fill();
+      }
+      if (n >= res.order.length) {
+        ctx.save(); ctx.strokeStyle = "#1d1d1f"; ctx.lineWidth = clamp(cell * 0.14, 2, 3.5); ctx.lineJoin = "round"; ctx.lineCap = "round";
+        ctx.beginPath();
+        res.path.forEach(function (q, m) { if (m) ctx.lineTo(X(q), Y(q)); else ctx.moveTo(X(q), Y(q)); });
+        ctx.stroke(); ctx.restore();
+      }
+      var mr = clamp(cell * 0.3, 4, 8);
+      [[res.s, "#1f9e45"], [res.t, "#e0352b"]].forEach(function (m) {
+        ctx.beginPath(); ctx.arc(X(m[0]), Y(m[0]), mr + 2, 0, 6.2832); ctx.fillStyle = "#f5f5f7"; ctx.fill();
+        ctx.beginPath(); ctx.arc(X(m[0]), Y(m[0]), mr, 0, 6.2832); ctx.fillStyle = m[1]; ctx.fill();
+      });
+      p.out.textContent = fmt(n);
+    });
+  }
+  function gridsTick(dt) {
+    var total = grids.d.res.order.length;
+    if (grids.step < total) {
+      grids.step = Math.min(total, grids.step + 58 * dt);
+      gridsDraw();
+    } else {
+      grids.t += dt;
+      if (grids.t > 2.6) { grids.t = 0; grids.step = 0; gridsDraw(); }
+    }
+  }
+
+  /* ---------------- Research chart ---------------- */
+  var BATCH = window.MANHATTAN.batch; // [km, reduction%, dijkstra, astar, angle]
+  var MEAN = BATCH.reduce(function (s, r) { return s + r[1]; }, 0) / BATCH.length;
+  function renderScatter() {
+    var box = document.getElementById("scatter"), w = box.clientWidth;
+    if (!w) return;
+    var h = clamp(Math.round(w * 0.46), 260, 400), m = { l: 42, r: 12, t: 30, b: 46 };
+    var iw = w - m.l - m.r, ih = h - m.t - m.b;
+    function X(v) { return m.l + v / 20 * iw; }
+    function Y(v) { return m.t + (1 - v / 100) * ih; }
+    var s = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Scatter plot of 147 trips: share of intersections A* skipped against trip length. Savings fall from around 80 to 97 percent on short trips to around 50 to 75 percent on the longest.">';
+    s += '<text x="0" y="12">Intersections A* skipped</text>';
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      s += '<line x1="' + m.l + '" x2="' + (w - m.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#dcdce1" stroke-width="1"/>';
+      s += '<text x="' + (m.l - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + "%</text>";
+    });
+    [0, 5, 10, 15, 20].forEach(function (v) {
+      s += '<text x="' + X(v) + '" y="' + (h - m.b + 20) + '" text-anchor="middle">' + v + "</text>";
+    });
+    s += '<text x="' + (m.l + iw / 2) + '" y="' + (h - 4) + '" text-anchor="middle">Trip length (km)</text>';
+    s += '<line x1="' + m.l + '" x2="' + (w - m.r) + '" y1="' + Y(MEAN) + '" y2="' + Y(MEAN) + '" stroke="#86868b" stroke-width="1"/>';
+    s += '<text x="' + (w - m.r) + '" y="' + (Y(MEAN) - 7) + '" text-anchor="end" style="font-weight:600;fill:#1d1d1f">Average ' + Math.round(MEAN) + "%</text>";
+    BATCH.forEach(function (r, j) {
+      s += '<circle class="dot" data-i="' + j + '" cx="' + X(r[0]).toFixed(1) + '" cy="' + Y(r[1]).toFixed(1) + '" r="4.5" fill="#1aa595" stroke="#f5f5f7" stroke-width="2"/>';
+    });
+    BATCH.forEach(function (r, j) {
+      s += '<circle class="hit" data-i="' + j + '" cx="' + X(r[0]).toFixed(1) + '" cy="' + Y(r[1]).toFixed(1) + '" r="11" fill="transparent"/>';
+    });
+    s += "</svg>";
+    box.innerHTML = s + '<div class="tip" hidden></div>';
+    var tip = box.querySelector(".tip"), dots = box.querySelectorAll(".dot"), active = null;
+    box.querySelector("svg").addEventListener("pointerover", function (e) {
+      var j = e.target.getAttribute && e.target.getAttribute("data-i");
+      if (j === null || !e.target.classList.contains("hit")) return;
+      var r = BATCH[+j];
+      if (active) active.setAttribute("r", "4.5");
+      active = dots[+j]; active.setAttribute("r", "7");
+      tip.innerHTML = "<b>" + r[0].toFixed(2) + " km trip</b><br>" + Math.round(r[1]) + "% of intersections skipped<br><span>Dijkstra " + fmt(r[2]) + " · A* " + fmt(r[3]) + "</span>";
+      tip.hidden = false;
+      var x = clamp(X(r[0]), 110, w - 110);
+      tip.style.left = x + "px"; tip.style.top = Y(r[1]) + "px";
+    });
+    box.querySelector("svg").addEventListener("pointerleave", function () {
+      tip.hidden = true; if (active) { active.setAttribute("r", "4.5"); active = null; }
+    });
+  }
+  (function fillTable() {
+    var rows = BATCH.slice().sort(function (a, b) { return a[0] - b[0]; });
+    document.querySelector("#trip-table tbody").innerHTML = rows.map(function (r) {
+      return "<tr><td>" + r[0].toFixed(2) + " km</td><td>" + fmt(r[2]) + "</td><td>" + fmt(r[3]) + "</td><td>" + r[1].toFixed(1) + "%</td><td>" + r[4].toFixed(1) + "°</td></tr>";
+    }).join("");
+  })();
+
+  /* ---------------- Statement: words light up as you scroll ---------------- */
+  var stmt = document.getElementById("statement-text"), words = [];
+  if (!REDUCED) {
+    var text = stmt.textContent.trim().split(/\s+/);
+    stmt.innerHTML = text.map(function (t) { return '<span class="w">' + t + "</span>"; }).join(" ");
+    words = Array.prototype.slice.call(stmt.querySelectorAll(".w"));
+    stmt.classList.add("scrub");
+  }
+  var lit = -1;
+  function statementUpdate() {
+    if (!words.length) return;
+    var r = stmt.getBoundingClientRect(), vh = window.innerHeight || 800;
+    var p = clamp((vh * 0.82 - r.top) / (r.height + vh * 0.3), 0, 1);
+    var n = Math.round(p * words.length);
+    if (n === lit) return;
+    words.forEach(function (w, j) { w.classList.toggle("on", j < n); });
+    lit = n;
+  }
+
+  /* ---------------- Count-up figures (final values are already in the HTML) ---------------- */
+  function countUp(el) {
+    var to = parseFloat(el.getAttribute("data-to")), dec = +(el.getAttribute("data-dec") || 0), t0 = null;
+    function step(ts) {
+      if (t0 === null) t0 = ts;
+      var p = Math.min(1, (ts - t0) / 1300), e = 1 - Math.pow(1 - p, 3), v = to * e;
+      el.textContent = dec ? v.toFixed(dec) : fmt(v);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---------------- Wiring ---------------- */
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) { es.forEach(function (e) { hero.visible = e.isIntersecting; }); }).observe(hero.stage);
+    new IntersectionObserver(function (es) { es.forEach(function (e) { grids.visible = e.isIntersecting; }); }, { threshold: 0.2 }).observe($("#how-grids"));
+    new IntersectionObserver(function (es, ob) {
+      es.forEach(function (e) {
+        if (e.isIntersecting && !race.played && !REDUCED) { race.played = true; raceStart(); ob.disconnect(); }
+      });
+    }, { threshold: 0.35 }).observe($("#race-stage"));
+    if (!REDUCED) {
+      var co = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); co.unobserve(e.target); } });
+      }, { threshold: 0.6 });
+      document.querySelectorAll(".count").forEach(function (el) { co.observe(el); });
+    }
+  }
+
+  var scrolled = true;
+  window.addEventListener("scroll", function () { scrolled = true; }, { passive: true });
+  var last = 0;
+  function frame(ts) {
+    var dt = last ? Math.min((ts - last) / 1000, 0.1) : 0;
+    last = ts;
+    if (!REDUCED) {
+      if (hero.visible) heroTick(dt);
+      if (grids.visible) gridsTick(dt);
+    }
+    if (race.running) raceTick(dt);
+    if (scrolled) { scrolled = false; statementUpdate(); }
+    requestAnimationFrame(frame);
+  }
+
+  function layoutAll() { heroLayout(); raceLayout(); gridsLayout(); renderScatter(); }
+  var rt = null, lastW = window.innerWidth;
+  window.addEventListener("resize", function () {
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    clearTimeout(rt); rt = setTimeout(layoutAll, 150);
+  });
+
+  layoutAll();
+  if (REDUCED) hero.phase = "static";
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

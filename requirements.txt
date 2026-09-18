@@ -1,0 +1,11 @@
+# Phase 1 (synthetic graph, Dijkstra, A*) uses only the Python standard library.
+osmnx
+networkx
+matplotlib
+folium
+numpy
+pandas
+
+# Phase 4 (interactive demo)
+streamlit
+streamlit-folium

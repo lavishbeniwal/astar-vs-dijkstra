@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OSMnx HTTP cache (re-created automatically)
+cache/
+
+# Local editor and assistant settings
+.claude/
+.vscode/
+.idea/
+.DS_Store
