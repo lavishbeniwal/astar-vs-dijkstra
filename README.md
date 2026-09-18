@@ -2,6 +2,8 @@
 
 Dijkstra and A* both find the shortest drive across Manhattan. A* just knows which way to look.
 
+**[Watch them race live →](https://lavishbeniwal.github.io/astar-vs-dijkstra/)**
+
 This project runs both search algorithms on Manhattan's real drivable road network from OpenStreetMap (4,634 intersections, 9,916 one-way-aware road segments), animates them node by node, and measures how much work A*'s straight-line heuristic saves.
 
 ![Dijkstra and A* exploring from West Village to Grand Central](experiments/output/west_village_to_grand_central.png)
